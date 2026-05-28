@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Diario</title>
+<meta name="theme-color" content="#0d0d0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Diario">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0f;
+  --surface: #141416;
+  --card: #1a1a1e;
+  --card2: #1f1f24;
+  --border: #2a2a30;
+  --border2: #333340;
+  --accent: #7c6af7;
+  --accent2: #a594fa;
+  --accent-glow: rgba(124,106,247,0.18);
+  --green: #3dd68c;
+  --green-dim: rgba(61,214,140,0.12);
+  --red: #f7546a;
+  --red-dim: rgba(247,84,106,0.12);
+  --amber: #f5a623;
+  --amber-dim: rgba(245,166,35,0.12);
+  --blue: #4fa8ff;
+  --blue-dim: rgba(79,168,255,0.12);
+  --text: #e8e8f0;
+  --text2: #9090a8;
+  --text3: #55556a;
+  --font: 'Space Grotesk', sans-serif;
+  --font-display: 'Syne', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+
+/* ── LAYOUT ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+  transition: width 0.25s ease; overflow: hidden;
+}
+.sidebar.collapsed { width: 0; }
+
+.sidebar-top {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 2px;
+}
+.sidebar-count { font-size: 11px; color: var(--text3); letter-spacing: 0.08em; }
+
+.sidebar-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+.entry-item {
+  padding: 11px 20px; cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.12s;
+}
+.entry-item:hover { background: rgba(255,255,255,0.03); border-left-color: var(--border2); }
+.entry-item.active { background: var(--accent-glow); border-left-color: var(--accent); }
+.ei-date { font-size: 10px; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+.ei-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ei-mood { font-size: 12px; margin-top: 3px; }
+.ei-preview { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.sidebar-btn {
+  margin: 10px 14px 14px;
+  padding: 10px; border: none; border-radius: 8px;
+  background: var(--accent); color: white;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.04em;
+  transition: opacity 0.15s; flex-shrink: 0;
+}
+.sidebar-btn:hover { opacity: 0.85; }
+
+/* ── MAIN ── */
+.main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 28px 20px 80px; overflow-y: auto; }
+
+/* ── TOPBAR ── */
+.topbar {
+  width: 100%; max-width: 780px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.toggle-sb {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 11px;
+  color: var(--text2); font-size: 15px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.toggle-sb:hover { border-color: var(--border2); }
+.topbar-title { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--text); }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.save-status { font-size: 11px; color: var(--text3); font-style: italic; transition: opacity 0.4s; }
+
+.tbtn {
+  padding: 7px 18px; border-radius: 20px; border: none;
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.06em; cursor: pointer; transition: opacity 0.15s;
+}
+.tbtn-save { background: var(--accent); color: white; }
+.tbtn-save:hover { opacity: 0.85; }
+.tbtn-print { background: var(--card); border: 1px solid var(--border); color: var(--text2); }
+.tbtn-print:hover { border-color: var(--border2); }
+
+/* ── VIEW BANNER ── */
+.view-banner {
+  width: 100%; max-width: 780px;
+  background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.25);
+  border-radius: 10px; padding: 10px 16px;
+  margin-bottom: 14px; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--amber); display: none;
+}
+.view-banner.show { display: flex; }
+.view-banner button {
+  background: none; border: 1px solid rgba(245,166,35,0.4);
+  border-radius: 16px; padding: 4px 14px;
+  font-size: 11px; color: var(--amber); cursor: pointer; font-family: var(--font);
+}
+
+/* ── TABS ── */
+.tabs {
+  width: 100%; max-width: 780px;
+  display: flex; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 4px;
+  margin-bottom: 20px;
+}
+.tab-btn {
+  flex: 1; padding: 9px 6px;
+  background: transparent; border: none; border-radius: 9px;
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  color: var(--text3); cursor: pointer; letter-spacing: 0.04em;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tab-btn.active { background: var(--card2); color: var(--accent2); }
+.tab-btn:hover:not(.active) { color: var(--text2); }
+
+/* ── PANELS ── */
+.panel { display: none; width: 100%; max-width: 780px; }
+.panel.active { display: block; }
+
+/* ── CARD ── */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px 24px; margin-bottom: 16px;
+}
+.card-title {
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-title span { font-size: 15px; }
+
+/* ── ENTRY HEADER ── */
+.entry-header { margin-bottom: 6px; }
+.entry-title-input {
+  background: transparent; border: none; outline: none;
+  font-family: var(--font-display); font-size: 28px; font-weight: 800;
+  color: var(--text); width: 100%;
+  border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 12px;
+}
+.entry-title-input::placeholder { color: var(--text3); }
+.entry-title-input:focus { border-bottom-color: var(--accent); }
+.meta-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.meta-field {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text3);
+}
+.meta-input {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 8px;
+  font-family: var(--font); font-size: 12px; color: var(--text);
+  outline: none; width: auto;
+}
+.meta-input:focus { border-color: var(--accent); }
+
+/* ── MOOD CHIPS ── */
+.mood-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.mood-chip {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: transparent;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text2); cursor: pointer; transition: all 0.12s;
+}
+.mood-chip:hover { border-color: var(--accent); color: var(--accent2); }
+.mood-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent2); }
+
+/* ── ENERGY ── */
+.energy-row { display: flex; align-items: center; gap: 12px; }
+.energy-label { font-size: 11px; color: var(--text3); min-width: 36px; }
+.energy-track {
+  flex: 1; height: 5px; background: var(--card2);
+  border-radius: 10px; cursor: pointer; position: relative;
+}
+.energy-fill {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(to right, var(--blue), var(--accent));
+  pointer-events: none; transition: width 0.15s;
+}
+.energy-val { font-size: 13px; font-weight: 700; color: var(--accent2); min-width: 36px; text-align: right; }
+
+/* ── TEXT INPUTS ── */
+.t-input {
+  width: 100%; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  font-family: var(--font); font-size: 13px; color: var(--text);
+  outline: none; resize: none; line-height: 1.6;
+  transition: border-color 0.15s;
+}
+.t-input:focus { border-color: var(--accent); }
+.t-input::placeholder { color: var(--text3); }
+
+.grat-row { display: grid; grid-template-columns: 22px 1fr; gap: 6px 10px; align-items: center; margin-bottom: 0; }
+.grat-num { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--accent); opacity: 0.5; text-align: right; }
+.grat-input {
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  outline: none; padding: 6px 0; font-family: var(--font); font-size: 13px; color: var(--text);
+  transition: border-color 0.15s;
+}
+.grat-input:focus { border-bottom-color: var(--accent); }
+.grat-input::placeholder { color: var(--text3); font-style: italic; }
+
+/* ── HABITS ── */
+.habits-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.habit-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: transparent;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text2); cursor: pointer; transition: all 0.12s;
+}
+.habit-pill:hover { border-color: var(--green); color: var(--text); }
+.habit-pill.done { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.hcheck { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+
+/* ── EXERCISE ── */
+.exercise-grid { display: grid; grid-template-columns: 1fr 120px; gap: 10px; }
+
+/* ── FOOD ── */
+.food-section { margin-bottom: 12px; }
+.food-section:last-child { margin-bottom: 0; }
+.food-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;
+}
+.food-check-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.diet-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text3); cursor: pointer; user-select: none;
+}
+.diet-box {
+  width: 16px; height: 16px; border-radius: 4px;
+  border: 1.5px solid var(--border); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; transition: all 0.12s;
+}
+.diet-toggle.on .diet-box { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.diet-toggle.off .diet-box { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+
+/* ── OBJETIVOS ── */
+.obj-week-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.obj-week-label { font-size: 12px; color: var(--text3); }
+.obj-week-range { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--text); }
+.obj-add-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.obj-add-input {
+  flex: 1; background: var(--card2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px;
+  font-family: var(--font); font-size: 13px; color: var(--text); outline: none;
+}
+.obj-add-input:focus { border-color: var(--accent); }
+.obj-add-input::placeholder { color: var(--text3); }
+.obj-add-btn {
+  padding: 9px 16px; background: var(--accent); color: white;
+  border: none; border-radius: 8px; font-family: var(--font); font-size: 12px;
+  font-weight: 600; cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+}
+.obj-add-btn:hover { opacity: 0.85; }
+.obj-list { display: flex; flex-direction: column; gap: 8px; }
+.obj-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  background: var(--card2); border: 1px solid var(--border);
+  transition: border-color 0.12s;
+}
+.obj-item.done { background: var(--green-dim); border-color: rgba(61,214,140,0.2); }
+.obj-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--border); background: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; cursor: pointer; flex-shrink: 0;
+  transition: all 0.12s;
+}
+.obj-item.done .obj-check { background: var(--green); border-color: var(--green); color: #0d0d0f; }
+.obj-text { flex: 1; font-size: 13px; color: var(--text); }
+.obj-item.done .obj-text { text-decoration: line-through; color: var(--text3); }
+.obj-del {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  font-size: 16px; padding: 0 2px; line-height: 1; transition: color 0.12s;
+}
+.obj-del:hover { color: var(--red); }
+.obj-progress { margin-top: 16px; }
+.obj-progress-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; display: flex; justify-content: space-between; }
+.obj-progress-track { height: 4px; background: var(--card2); border-radius: 10px; overflow: hidden; }
+.obj-progress-fill { height: 100%; background: linear-gradient(to right, var(--green), var(--accent)); border-radius: 10px; transition: width 0.3s; }
+
+/* ── FOOTER ── */
+.entry-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.footer-quote { font-size: 11px; color: var(--text3); font-style: italic; }
+.footer-num { font-size: 11px; color: var(--text3); }
+
+/* ── READONLY ── */
+.panel.readonly input, .panel.readonly textarea { pointer-events: none; }
+.panel.readonly .mood-chip, .panel.readonly .habit-pill,
+.panel.readonly .energy-track, .panel.readonly .diet-toggle,
+.panel.readonly .obj-check, .panel.readonly .obj-del,
+.panel.readonly .obj-add-row { pointer-events: none; opacity: 0.7; }
+
+@media print {
+  .sidebar, .topbar, .tabs, .view-banner { display: none !important; }
+  .main { padding: 0; }
+  .panel { display: block !important; }
+  body { background: white; color: black; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <div class="sidebar-logo">diario.</div>
+    <div class="sidebar-count" id="entryCount">0 entradas</div>
+  </div>
+  <div class="sidebar-list" id="sidebarList"></div>
+  <button class="sidebar-btn" onclick="newEntry()">+ Nueva entrada</button>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="toggle-sb" onclick="toggleSidebar()">☰</button>
+      <span class="topbar-title">Mi Diario</span>
+    </div>
+    <div class="topbar-right">
+      <span class="save-status" id="saveStatus"></span>
+      <button class="tbtn tbtn-print" onclick="window.print()">🖨</button>
+      <button class="tbtn tbtn-save" onclick="saveEntry()">Guardar</button>
+    </div>
+  </div>
+
+  <div class="view-banner" id="viewBanner">
+    <span>📖 Entrada anterior — solo lectura</span>
+    <button onclick="newEntry()">+ Escribir de hoy</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('diario', this)">✦ Diario</button>
+    <button class="tab-btn" onclick="switchTab('cuerpo', this)">💪 Cuerpo</button>
+    <button class="tab-btn" onclick="switchTab('comida', this)">🍽 Comida</button>
+    <button class="tab-btn" onclick="switchTab('objetivos', this)">🎯 Objetivos</button>
+  </div>
+
+  <!-- ═══ TAB: DIARIO ═══ -->
+  <div class="panel active" id="tab-diario">
+
+    <div class="card">
+      <input class="entry-title-input" id="f_title" type="text" placeholder="¿Cómo fue tu día?">
+      <div class="meta-row">
+        <div class="meta-field">
+          <span>📅</span>
+          <input class="meta-input" id="f_dd" type="text" placeholder="DD" style="width:36px;text-align:center;">
+          <span>/</span>
+          <input class="meta-input" id="f_mm" type="text" placeholder="MM" style="width:36px;text-align:center;">
+          <span>/</span>
+          <input class="meta-input" id="f_yyyy" type="text" placeholder="AAAA" style="width:58px;text-align:center;">
+        </div>
+        <div class="meta-field">
+          <span>🕐</span>
+          <input class="meta-input" id="f_hora" type="text" placeholder="__:__" style="width:56px;">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>☁</span> Estado de ánimo</div>
+      <div class="mood-grid" id="moodGrid">
+        <button class="mood-chip" onclick="toggleMood(this)">😊 Bien</button>
+        <button class="mood-chip" onclick="toggleMood(this)">✨ Genial</button>
+        <button class="mood-chip" onclick="toggleMood(this)">😐 Neutro</button>
+        <button class="mood-chip" onclick="toggleMood(this)">😔 Triste</button>
+        <button class="mood-chip" onclick="toggleMood(this)">😤 Frustrado/a</button>
+        <button class="mood-chip" onclick="toggleMood(this)">😰 Ansioso/a</button>
+        <button class="mood-chip" onclick="toggleMood(this)">😴 Cansado/a</button>
+        <button class="mood-chip" onclick="toggleMood(this)">🔥 Motivado/a</button>
+      </div>
+      <div style="margin-top:18px;">
+        <div class="card-title" style="margin-bottom:12px;"><span>⚡</span> Energía</div>
+        <div class="energy-row">
+          <span class="energy-label">Baja</span>
+          <div class="energy-track" id="energiaBar" onclick="setEnergia(event)">
+            <div class="energy-fill" id="energiaFill" style="width:50%"></div>
+          </div>
+          <span class="energy-label">Alta</span>
+          <span class="energy-val" id="energiaVal">5/10</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🙏</span> Gratitud</div>
+      <div class="grat-row">
+        <span class="grat-num">1</span><input class="grat-input" id="f_grat1" type="text" placeholder="Algo pequeño también vale…">
+        <span class="grat-num">2</span><input class="grat-input" id="f_grat2" type="text" placeholder="Una persona, un momento…">
+        <span class="grat-num">3</span><input class="grat-input" id="f_grat3" type="text" placeholder="Algo de hoy…">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🎯</span> Intención del día</div>
+      <textarea class="t-input" id="f_intencion" rows="2" placeholder="Hoy quiero enfocarme en…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>✍</span> Entrada libre</div>
+      <textarea class="t-input" id="f_libre" rows="7" placeholder="Escribí sin filtro lo que sientas, pensás o viviste hoy…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>⭐</span> Mejor momento del día</div>
+      <textarea class="t-input" id="f_highlight" rows="3" placeholder="Ese instante que vale la pena recordar…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>💡</span> Aprendizaje</div>
+      <textarea class="t-input" id="f_aprendi" rows="3" placeholder="Una idea, reflexión o algo nuevo…"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🌙</span> Cierre del día</div>
+      <textarea class="t-input" id="f_cierre" rows="3" placeholder="Una palabra, una frase, un deseo para mañana…"></textarea>
+    </div>
+
+    <div class="entry-footer">
+      <span class="footer-quote" id="footerQuote">"No escribo para recordar, sino para entender."</span>
+      <span class="footer-num" id="pageNum">— — —</span>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: CUERPO ═══ -->
+  <div class="panel" id="tab-cuerpo">
+
+    <div class="card">
+      <div class="card-title"><span>✅</span> Hábitos del día</div>
+      <div class="habits-wrap" id="habitsGrid">
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>💧 Hidratación</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>🏃 Ejercicio</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>📚 Lectura</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>💊 Creatina</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>😴 Descanso</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>🌿 Tiempo afuera</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>🚫 Sin pantallas</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>🐕 Pasear perras</div>
+        <div class="habit-pill" onclick="toggleHabit(this)"><div class="hcheck"></div>🚫 No P</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🏋</span> Sesión de ejercicio</div>
+      <div class="exercise-grid">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;">¿Qué hice?</div>
+          <textarea class="t-input" id="f_ejercicio" rows="4" placeholder="Ej: Pecho + tríceps. Press banca 4x8, fondos 3x12, extensiones…"></textarea>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;">Duración</div>
+          <input class="t-input" id="f_ejercicio_min" type="text" placeholder="ej: 55 min" style="text-align:center;font-size:15px;font-weight:600;">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ TAB: COMIDA ═══ -->
+  <div class="panel" id="tab-comida">
+
+    <div class="card">
+      <div class="card-title"><span>🍽</span> Registro de alimentación</div>
+
+      <div class="food-section">
+        <div class="food-label">🌅 Desayuno</div>
+        <textarea class="t-input" id="f_desayuno" rows="2" placeholder="¿Qué desayunaste?"></textarea>
+        <div class="food-check-row">
+          <div class="diet-toggle" id="dt_desayuno" onclick="toggleDiet(this)">
+            <div class="diet-box"></div>
+            <span>Dentro de dieta</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+      <div class="food-section">
+        <div class="food-label">☀️ Almuerzo</div>
+        <textarea class="t-input" id="f_almuerzo" rows="2" placeholder="¿Qué almorzaste?"></textarea>
+        <div class="food-check-row">
+          <div class="diet-toggle" id="dt_almuerzo" onclick="toggleDiet(this)">
+            <div class="diet-box"></div>
+            <span>Dentro de dieta</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+      <div class="food-section">
+        <div class="food-label">🫖 Merienda</div>
+        <textarea class="t-input" id="f_merienda" rows="2" placeholder="¿Merendaste algo?"></textarea>
+        <div class="food-check-row">
+          <div class="diet-toggle" id="dt_merienda" onclick="toggleDiet(this)">
+            <div class="diet-box"></div>
+            <span>Dentro de dieta</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+      <div class="food-section">
+        <div class="food-label">🌙 Cena</div>
+        <textarea class="t-input" id="f_cena" rows="2" placeholder="¿Qué cenaste?"></textarea>
+        <div class="food-check-row">
+          <div class="diet-toggle" id="dt_cena" onclick="toggleDiet(this)">
+            <div class="diet-box"></div>
+            <span>Dentro de dieta</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+      <div class="food-section">
+        <div class="food-label">🍪 Picoteos</div>
+        <textarea class="t-input" id="f_picoteos" rows="2" placeholder="Snacks, extras, lo que cayó entre comidas…"></textarea>
+        <div class="food-check-row">
+          <div class="diet-toggle" id="dt_picoteos" onclick="toggleDiet(this)">
+            <div class="diet-box"></div>
+            <span>Dentro de dieta</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: OBJETIVOS ═══ -->
+  <div class="panel" id="tab-objetivos">
+
+    <div class="card">
+      <div class="obj-week-header">
+        <div>
+          <div class="obj-week-label">Semana actual</div>
+          <div class="obj-week-range" id="weekRange">—</div>
+        </div>
+      </div>
+
+      <div class="obj-add-row">
+        <input class="obj-add-input" id="objInput" type="text" placeholder="Agregar objetivo…" onkeydown="if(event.key==='Enter') addObj()">
+        <button class="obj-add-btn" onclick="addObj()">+ Agregar</button>
+      </div>
+
+      <div class="obj-list" id="objList"></div>
+
+      <div class="obj-progress" id="objProgress" style="display:none;">
+        <div class="obj-progress-label">
+          <span>Progreso semanal</span>
+          <span id="objProgressTxt">0 / 0</span>
+        </div>
+        <div class="obj-progress-track">
+          <div class="obj-progress-fill" id="objProgressFill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+</div>
+
+<script>
+const STORAGE_KEY   = 'journal_entries_v2';
+const OBJ_KEY       = 'journal_objectives_v2';
+
+let entries      = [];
+let currentId    = null;
+let energiaValue = 5;
+let autoTimer    = null;
+let objectives   = [];   // { id, text, done, weekKey }
+let currentTab   = 'diario';
+
+const quotes = [
+  '"No escribo para recordar, sino para entender."',
+  '"El diario es el espejo del alma."',
+  '"Escribir es pensar dos veces."',
+  '"Cada página es un paso hacia adentro."',
+  '"Las palabras son el hogar de los días vividos."'
+];
+
+// ── WEEK HELPERS ──
+function getWeekKey(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - d.getDay() + 1); // Monday
+  return d.toISOString().slice(0,10);
+}
+function getWeekRange(weekKey) {
+  const mon = new Date(weekKey);
+  const sun = new Date(weekKey);
+  sun.setDate(sun.getDate() + 6);
+  const fmt = d => `${d.getDate()}/${d.getMonth()+1}`;
+  return `${fmt(mon)} – ${fmt(sun)}`;
+}
+
+// ── STORAGE ──
+function loadEntries() {
+  try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { entries = []; }
+}
+function saveEntries() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch { showStatus('⚠ Sin espacio'); }
+}
+function loadObjectives() {
+  try { objectives = JSON.parse(localStorage.getItem(OBJ_KEY)) || []; } catch { objectives = []; }
+  if (objectives.length === 0) {
+    // presets
+    const wk = getWeekKey(new Date());
+    objectives = [
+      { id: 'p1', text: '🧹 Limpieza', done: false, weekKey: wk },
+      { id: 'p2', text: '🌱 Jardinería', done: false, weekKey: wk },
+    ];
+    saveObjectives();
+  }
+}
+function saveObjectives() {
+  try { localStorage.setItem(OBJ_KEY, JSON.stringify(objectives)); } catch {}
+}
+
+// ── READ FORM ──
+function readForm() {
+  const moods = [], habits = [];
+  document.querySelectorAll('.mood-chip.active').forEach(b => moods.push(b.textContent.trim()));
+  document.querySelectorAll('.habit-pill.done').forEach(h => habits.push(h.textContent.trim()));
+  const dietMap = {};
+  ['desayuno','almuerzo','merienda','cena','picoteos'].forEach(k => {
+    const el = document.getElementById('dt_' + k);
+    dietMap[k] = el ? (el.classList.contains('on') ? 'on' : el.classList.contains('off') ? 'off' : null) : null;
+  });
+  return {
+    title:    document.getElementById('f_title').value,
+    dd:       document.getElementById('f_dd').value,
+    mm:       document.getElementById('f_mm').value,
+    yyyy:     document.getElementById('f_yyyy').value,
+    hora:     document.getElementById('f_hora').value,
+    moods, energia: energiaValue,
+    grat1:    document.getElementById('f_grat1').value,
+    grat2:    document.getElementById('f_grat2').value,
+    grat3:    document.getElementById('f_grat3').value,
+    intencion:document.getElementById('f_intencion').value,
+    libre:    document.getElementById('f_libre').value,
+    highlight:document.getElementById('f_highlight').value,
+    aprendi:  document.getElementById('f_aprendi').value,
+    cierre:   document.getElementById('f_cierre').value,
+    habits,
+    ejercicio:    document.getElementById('f_ejercicio').value,
+    ejercicio_min:document.getElementById('f_ejercicio_min').value,
+    desayuno: document.getElementById('f_desayuno').value,
+    almuerzo: document.getElementById('f_almuerzo').value,
+    merienda: document.getElementById('f_merienda').value,
+    cena:     document.getElementById('f_cena').value,
+    picoteos: document.getElementById('f_picoteos').value,
+    dietMap,
+  };
+}
+
+// ── FILL FORM ──
+function fillForm(d) {
+  document.getElementById('f_title').value     = d.title || '';
+  document.getElementById('f_dd').value        = d.dd || '';
+  document.getElementById('f_mm').value        = d.mm || '';
+  document.getElementById('f_yyyy').value      = d.yyyy || '';
+  document.getElementById('f_hora').value      = d.hora || '';
+  document.getElementById('f_grat1').value     = d.grat1 || '';
+  document.getElementById('f_grat2').value     = d.grat2 || '';
+  document.getElementById('f_grat3').value     = d.grat3 || '';
+  document.getElementById('f_intencion').value = d.intencion || '';
+  document.getElementById('f_libre').value     = d.libre || '';
+  document.getElementById('f_highlight').value = d.highlight || '';
+  document.getElementById('f_aprendi').value   = d.aprendi || '';
+  document.getElementById('f_cierre').value    = d.cierre || '';
+  document.getElementById('f_ejercicio').value     = d.ejercicio || '';
+  document.getElementById('f_ejercicio_min').value = d.ejercicio_min || '';
+  document.getElementById('f_desayuno').value  = d.desayuno || '';
+  document.getElementById('f_almuerzo').value  = d.almuerzo || '';
+  document.getElementById('f_merienda').value  = d.merienda || '';
+  document.getElementById('f_cena').value      = d.cena || '';
+  document.getElementById('f_picoteos').value  = d.picoteos || '';
+
+  document.querySelectorAll('.mood-chip').forEach(b =>
+    b.classList.toggle('active', (d.moods||[]).includes(b.textContent.trim())));
+
+  energiaValue = d.energia || 5;
+  document.getElementById('energiaFill').style.width = (energiaValue*10)+'%';
+  document.getElementById('energiaVal').textContent  = energiaValue+'/10';
+
+  document.querySelectorAll('.habit-pill').forEach(h => {
+    const lbl = h.textContent.trim();
+    const on  = (d.habits||[]).includes(lbl);
+    h.classList.toggle('done', on);
+    h.querySelector('.hcheck').textContent = on ? '✓' : '';
+  });
+
+  ['desayuno','almuerzo','merienda','cena','picoteos'].forEach(k => {
+    const el = document.getElementById('dt_'+k);
+    if (!el) return;
+    const val = (d.dietMap||{})[k];
+    el.classList.remove('on','off');
+    if (val) el.classList.add(val);
+    el.querySelector('.diet-box').textContent = val === 'on' ? '✓' : val === 'off' ? '✗' : '';
+  });
+}
+
+function clearForm() {
+  const now = new Date();
+  fillForm({
+    dd:   String(now.getDate()).padStart(2,'0'),
+    mm:   String(now.getMonth()+1).padStart(2,'0'),
+    yyyy: now.getFullYear(),
+    hora: String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),
+  });
+  document.getElementById('footerQuote').textContent = quotes[Math.floor(Math.random()*quotes.length)];
+}
+
+// ── SAVE ──
+function saveEntry() {
+  const data = readForm();
+  const dateStr    = `${data.yyyy}-${data.mm}-${data.dd}`;
+  const displayDate= `${data.dd}/${data.mm}/${data.yyyy}`;
+  if (currentId) {
+    const idx = entries.findIndex(e => e.id === currentId);
+    if (idx !== -1) entries[idx] = { ...entries[idx], ...data, dateStr, displayDate, updatedAt: Date.now() };
+  } else {
+    const ne = { id: Date.now().toString(), ...data, dateStr, displayDate, createdAt: Date.now(), updatedAt: Date.now() };
+    entries.unshift(ne);
+    currentId = ne.id;
+  }
+  saveEntries();
+  renderSidebar();
+  showStatus('✓ Guardado');
+  document.getElementById('pageNum').textContent =
+    `${entries.findIndex(e=>e.id===currentId)+1} / ${entries.length}`;
+}
+
+// ── AUTOSAVE ──
+function scheduleAutoSave() {
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => {
+    if (!document.getElementById('tab-diario').classList.contains('readonly')) {
+      saveEntry(); showStatus('✓ Guardado automático');
+    }
+  }, 3000);
+}
+document.querySelectorAll('input,textarea').forEach(el => el.addEventListener('input', scheduleAutoSave));
+
+// ── SIDEBAR ──
+function renderSidebar() {
+  const list  = document.getElementById('sidebarList');
+  const count = document.getElementById('entryCount');
+  count.textContent = entries.length + (entries.length === 1 ? ' entrada' : ' entradas');
+  list.innerHTML = '';
+  entries.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'entry-item' + (e.id === currentId ? ' active' : '');
+    div.innerHTML = `
+      <div class="ei-date">${e.displayDate||e.dateStr||'—'}</div>
+      <div class="ei-title">${e.title||'(sin título)'}</div>
+      <div class="ei-mood">${(e.moods||[]).slice(0,3).join(' ')}</div>
+      <div class="ei-preview">${e.libre ? e.libre.slice(0,55)+(e.libre.length>55?'…':'') : ''}</div>`;
+    div.addEventListener('click', () => loadEntry(e.id));
+    list.appendChild(div);
+  });
+}
+
+// ── LOAD / TODAY ──
+function isToday(entry) {
+  const t = new Date();
+  const ts = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  return entry.dateStr === ts;
+}
+function setReadonly(val) {
+  ['tab-diario','tab-cuerpo','tab-comida'].forEach(id =>
+    document.getElementById(id).classList.toggle('readonly', val));
+}
+function loadEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  currentId = id;
+  fillForm(entry);
+  const past = !isToday(entry);
+  setReadonly(past);
+  document.getElementById('viewBanner').classList.toggle('show', past);
+  document.getElementById('pageNum').textContent =
+    `${entries.findIndex(e=>e.id===id)+1} / ${entries.length}`;
+  renderSidebar();
+}
+function newEntry() {
+  currentId = null;
+  clearForm();
+  setReadonly(false);
+  document.getElementById('viewBanner').classList.remove('show');
+  document.getElementById('pageNum').textContent = '— — —';
+  document.getElementById('saveStatus').textContent = '';
+  renderSidebar();
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  currentTab = name;
+}
+
+// ── MOOD / ENERGY / HABITS ──
+function toggleMood(btn) { btn.classList.toggle('active'); scheduleAutoSave(); }
+function setEnergia(e) {
+  const bar  = document.getElementById('energiaBar');
+  const rect = bar.getBoundingClientRect();
+  const pct  = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+  energiaValue = Math.round(pct * 10);
+  document.getElementById('energiaFill').style.width = (energiaValue*10)+'%';
+  document.getElementById('energiaVal').textContent  = energiaValue+'/10';
+  scheduleAutoSave();
+}
+function toggleHabit(el) {
+  el.classList.toggle('done');
+  el.querySelector('.hcheck').textContent = el.classList.contains('done') ? '✓' : '';
+  scheduleAutoSave();
+}
+function toggleDiet(el) {
+  if (el.classList.contains('on')) {
+    el.classList.remove('on'); el.classList.add('off');
+    el.querySelector('.diet-box').textContent = '✗';
+  } else if (el.classList.contains('off')) {
+    el.classList.remove('off');
+    el.querySelector('.diet-box').textContent = '';
+  } else {
+    el.classList.add('on');
+    el.querySelector('.diet-box').textContent = '✓';
+  }
+  scheduleAutoSave();
+}
+
+// ── OBJECTIVES ──
+function currentWeekKey() { return getWeekKey(new Date()); }
+function weekObjectives()  { return objectives.filter(o => o.weekKey === currentWeekKey()); }
+
+function renderObjectives() {
+  const wk   = currentWeekKey();
+  const list = document.getElementById('objList');
+  const wos  = weekObjectives();
+
+  document.getElementById('weekRange').textContent = getWeekRange(wk);
+  list.innerHTML = '';
+  wos.forEach(o => {
+    const div = document.createElement('div');
+    div.className = 'obj-item' + (o.done ? ' done' : '');
+    div.innerHTML = `
+      <div class="obj-check" onclick="toggleObj('${o.id}')">${o.done ? '✓' : ''}</div>
+      <div class="obj-text">${o.text}</div>
+      <button class="obj-del" onclick="delObj('${o.id}')">×</button>`;
+    list.appendChild(div);
+  });
+
+  const prog = document.getElementById('objProgress');
+  if (wos.length > 0) {
+    prog.style.display = 'block';
+    const done = wos.filter(o=>o.done).length;
+    document.getElementById('objProgressTxt').textContent  = `${done} / ${wos.length}`;
+    document.getElementById('objProgressFill').style.width = `${(done/wos.length)*100}%`;
+  } else {
+    prog.style.display = 'none';
+  }
+}
+function addObj() {
+  const inp = document.getElementById('objInput');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  objectives.push({ id: Date.now().toString(), text: txt, done: false, weekKey: currentWeekKey() });
+  inp.value = '';
+  saveObjectives();
+  renderObjectives();
+}
+function toggleObj(id) {
+  const o = objectives.find(x => x.id === id);
+  if (o) { o.done = !o.done; saveObjectives(); renderObjectives(); }
+}
+function delObj(id) {
+  objectives = objectives.filter(x => x.id !== id);
+  saveObjectives(); renderObjectives();
+}
+
+// ── STATUS ──
+function showStatus(msg) {
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg; el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
+// ── SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+// ── INIT ──
+loadEntries();
+loadObjectives();
+clearForm();
+renderSidebar();
+renderObjectives();
+
+const now      = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+const todayEntry = entries.find(e => e.dateStr === todayStr);
+if (todayEntry) {
+  currentId = todayEntry.id;
+  fillForm(todayEntry);
+  setReadonly(false);
+  document.getElementById('viewBanner').classList.remove('show');
+  document.getElementById('pageNum').textContent =
+    `${entries.findIndex(e=>e.id===todayEntry.id)+1} / ${entries.length}`;
+  renderSidebar();
+}
+</script>
+</body>
+</html>
